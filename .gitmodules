@@ -1,5 +1,5 @@
-[submodule ".\\third_party\\libsimdpp"]
-	path = .\\third_party\\libsimdpp
+[submodule "third_party/libsimdpp"]
+	path = third_party/libsimdpp
 	url = https://github.com/p12tic/libsimdpp
 [submodule "third_party/catch2"]
 	path = third_party/catch2
