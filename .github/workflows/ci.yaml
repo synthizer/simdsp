@@ -22,12 +22,11 @@ jobs:
       fail-fast: true
       matrix:
         include:
-          #          - os: ubuntu-20.04
-          #          - os: ubuntu-18.04
+          - os: ubuntu-20.04
+          - os: ubuntu-18.04
           - os: macos-latest
 
   windows:
-    if: "false"
     runs-on: "${{ matrix.OS }}"
     env:
       VCVARS_PATH: ${{matrix.VCVARS_PATH}}
