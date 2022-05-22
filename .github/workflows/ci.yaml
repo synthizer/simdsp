@@ -3,11 +3,13 @@ on:
   pull_request: {}
 
 jobs:
-  ubuntu:
+  nonwindows:
     runs-on: ${{matrix.os}}
     steps:
       - name: Checkout
         uses: actions/checkout@v2
+        with:
+          submodules: true
       - name: "Build CI"
         run: |
           cd $GITHUB_WORKSPACE
@@ -31,6 +33,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v2
+        with:
+          submodules: true
       - name: Configure MSVC Environment Variables
         shell: cmd
         run: |
