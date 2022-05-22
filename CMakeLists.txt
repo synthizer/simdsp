@@ -13,17 +13,20 @@ add_library(simdsp STATIC
   src/convolution/generic_block_convolution.cpp
 )
 target_include_directories(simdsp PUBLIC include)
+set_property(TARGET simdsp PROPERTY CXX_STANDARD 17)
 
 add_executable(benches
   bench/convolution_engine.cpp
 )
 target_link_libraries(benches simdsp benchmark::benchmark benchmark::benchmark_main)
+set_property(TARGET benches PROPERTY CXX_STANDARD 17)
 
 add_executable(tests
   tests/main.cpp
   tests/passes.cpp
 )
 target_link_libraries(tests simdsp Catch2::Catch2)
+set_property(TARGET tests PROPERTY CXX_STANDARD 17)
 
 include(CTest)
 include(third_party/catch2/contrib/Catch.cmake)
