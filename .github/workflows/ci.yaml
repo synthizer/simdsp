@@ -1,0 +1,61 @@
+on:
+  push: {}
+  pull_request: {}
+
+jobs:
+  ubuntu:
+    runs-on: ${{matrix.os}}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: "Build CI"
+        run: |
+          cd $GITHUB_WORKSPACE
+          mkdir build
+          cd build
+          cmake ..
+          make
+          make test
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - os: ubuntu-20.04
+          - os: ubuntu-18.04
+          - os: macos-latest
+
+  windows:
+    runs-on: "${{ matrix.OS }}"
+    env:
+      VCVARS_PATH: ${{matrix.VCVARS_PATH}}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Configure MSVC Environment Variables
+        shell: cmd
+        run: |
+          call "%VCVARS_PATH%"
+          set > %GITHUB_ENV%
+      - name: install ninja
+        shell: powershell
+        run: |
+          choco install ninja
+      - name: Build and test
+        shell: powershell
+        run: |
+          set-location $Env:GITHUB_WORKSPACE
+          mkdir build
+          cd build
+          cmake -G Ninja ..
+          ninja
+          ninja test
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - VCVARS_PATH: C:\Program Files (x86)\Microsoft Visual Studio\2019\enterprise\VC\Auxiliary\Build\vcvars32.bat
+            OS: windows-2019
+          - VCVARS_PATH: C:\Program Files (x86)\Microsoft Visual Studio\2019\enterprise\VC\Auxiliary\Build\vcvars64.bat
+            OS: windows-2019
+          - VCVARS_PATH: C:\Program Files\Microsoft Visual Studio\2022\enterprise\VC\Auxiliary\Build\vcvars64.bat
+            OS: windows-2022

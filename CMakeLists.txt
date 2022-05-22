@@ -25,6 +25,6 @@ add_executable(tests
 )
 target_link_libraries(tests simdsp Catch2::Catch2)
 
-include(ctest)
+include(CTest)
 include(third_party/catch2/contrib/Catch.cmake)
 catch_discover_tests(tests)
