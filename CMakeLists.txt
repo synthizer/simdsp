@@ -8,12 +8,29 @@ add_subdirectory(third_party/catch2)
 set(BENCHMARK_ENABLE_TESTING OFF)
 add_subdirectory(third_party/benchmark)
 
+# these two variables define two kinds of source files: normal files, and files which must go via CPU dynamic dispatch.
+#
+# They are turned into the library, below.
+set(VANILLA_FILES
+  src/cpu_capabilities.cpp
+)
+
+# these are for dispatching
+set(DISPATCHED_FILES
+  src/dispatched/convolution/generic_block_convolution.cpp
+)
+
+function(setup_properties T)
+  target_include_directories(${T} PRIVATE include)
+  set_property(TARGET ${T} PROPERTY CXX_STANDARD 17)
+endfunction()
 
 add_library(simdsp STATIC
-  src/convolution/generic_block_convolution.cpp
+  ${VANILLA_FILES}
+  ${DISPATCHED_FILES}
 )
 target_include_directories(simdsp PUBLIC include)
-set_property(TARGET simdsp PROPERTY CXX_STANDARD 17)
+setup_properties(simdsp)
 
 add_executable(benches
   bench/convolution_engine.cpp
@@ -31,3 +48,7 @@ set_property(TARGET tests PROPERTY CXX_STANDARD 17)
 include(CTest)
 include(third_party/catch2/contrib/Catch.cmake)
 catch_discover_tests(tests)
+
+add_executable(print_cpuinfo utilities/print_cpuinfo.cpp)
+set_property(TARGET print_cpuinfo PROPERTY CXX_STANDARD 17)
+target_link_libraries(print_cpuinfo simdsp)
