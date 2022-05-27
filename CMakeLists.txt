@@ -34,6 +34,7 @@ setup_properties(simdsp)
 
 add_executable(benches
   bench/convolution_engine.cpp
+  bench/cpu_capabilities.cpp
 )
 target_link_libraries(benches simdsp benchmark::benchmark benchmark::benchmark_main)
 set_property(TARGET benches PROPERTY CXX_STANDARD 17)

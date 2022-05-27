@@ -12,7 +12,8 @@
 
 #include "simdsp/cpu_capabilities.hpp"
 
-#include <cstdint>
+#include <stddef.h>
+#include <stdint.h>
 
 #if __GNUC__
 #include <cpuid.h>
