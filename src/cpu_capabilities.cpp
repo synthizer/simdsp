@@ -12,6 +12,7 @@
 
 #include "simdsp/cpu_capabilities.hpp"
 
+#include <atomic>
 #include <stddef.h>
 #include <stdint.h>
 
@@ -119,7 +120,7 @@ static inline cpu_manufacturer get_cpu_manufacturer(uint32_t ebx, uint32_t ecx, 
 
 } // namespace detail
 
-CpuCapabilities getCpuCapabilities() {
+CpuCapabilities getCpuCapabilitiesUncached() {
   CpuCapabilities caps{};
 
   uint32_t eax, ebx, ecx, edx;
@@ -182,6 +183,45 @@ CpuCapabilities getCpuCapabilities() {
   }
 
   return caps;
+}
+
+enum {
+  CPU_CACHE_UNINITIALIZED = 0,
+  CPU_CACHE_INITIALIZING,
+  CPU_CACHE_INITIALIZED,
+};
+
+static struct {
+  std::atomic<unsigned int> state = CPU_CACHE_UNINITIALIZED;
+  CpuCapabilities capabilities;
+} cpu_capabilities_cache;
+
+CpuCapabilities getCpuCapabilities() {
+  // Fast path: load and return.
+  //
+  // Must be acquire because of the first initialization.
+  unsigned int old_state = cpu_capabilities_cache.state.load(std::memory_order_acquire);
+
+  if (old_state == CPU_CACHE_INITIALIZED) {
+    return cpu_capabilities_cache.capabilities;
+  }
+
+  // If we got an old_state of uninitialized, try to win the CAS race and put the cache in place.
+  if (old_state == CPU_CACHE_UNINITIALIZED) {
+    if (cpu_capabilities_cache.state.compare_exchange_strong(
+            old_state, CPU_CACHE_INITIALIZING, std::memory_order_relaxed, std::memory_order_relaxed) == true) {
+      cpu_capabilities_cache.capabilities = getCpuCapabilitiesUncached();
+      // Release, since capabilities themselves aren't atomic.
+      cpu_capabilities_cache.state.store(CPU_CACHE_INITIALIZED, std::memory_order_release);
+    }
+  }
+
+  // Slow path: someone else is initializing, which takes on the order of a couple microseconds.  Spin until that's
+  // done.  THis must be acquire because of the update from the other thread, which touches the non-atomic field.
+  while (cpu_capabilities_cache.state.load(std::memory_order_acquire) != CPU_CACHE_INITIALIZED)
+    ;
+
+  return cpu_capabilities_cache.capabilities;
 }
 
 } // namespace simdsp

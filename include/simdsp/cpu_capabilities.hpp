@@ -85,6 +85,10 @@ CpuCapabilities operator|(const CpuCapabilities &a, const CpuCapabilities &b);
  *
  * This is an expensive function, easily on the order of hundreds of cycles.  Users should cache the results.
  */
+CpuCapabilities getCpuCapabilitiesUncached();
+/*
+ * Get cached CPU capabilities.  After the first slow invocation, this function is an atomic load.
+ */
 CpuCapabilities getCpuCapabilities();
 
 } // namespace simdsp
