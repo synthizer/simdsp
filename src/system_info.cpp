@@ -11,12 +11,14 @@
  */
 
 #include "simdsp/system_info.hpp"
+#include "simdsp/feature_macros.hpp"
 
 #include <atomic>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
 
+#if SIMDSP_IS_X86
 #if __GNUC__
 #include <cpuid.h>
 #endif
@@ -24,6 +26,7 @@
 #if _MSC_VER
 #include <immintrin.h>
 #include <intrin.h> // __cpuidex on MSVC 2017
+#endif
 #endif
 
 namespace simdsp {
@@ -80,7 +83,77 @@ BOOL_OPS(^)
 
 #undef BOOL_OPS
 
-static inline void runCpuId(unsigned level, unsigned subleaf, unsigned *eax, unsigned *ebx, unsigned *ecx,
+const char *cpuManufacturerToString(CpuManufacturer man) {
+  if (man == CpuManufacturer::INTEL) {
+    return "intel";
+  } else if (man == CpuManufacturer::AMD) {
+    return "amd";
+  } else if (man == CpuManufacturer::APPLE) {
+    return "apple";
+  } else {
+    return "unknown";
+  }
+}
+
+/*
+ * We define the platform-agnostic version of this up here, then jump into preprocessor-guarded code for the rest of the
+ * file.
+ */
+
+static CpuCapabilities getCpuCapabilities();
+static CpuManufacturer getCpuManufacturer();
+static CpuCaches getCpuCacheInfo();
+
+SystemInfo getSystemInfoUncached() {
+  SystemInfo sysinfo{};
+
+  sysinfo.cpu_capabilities = getCpuCapabilities();
+  sysinfo.cpu_manufacturer = getCpuManufacturer();
+  sysinfo.cache_info = getCpuCacheInfo();
+  return sysinfo;
+}
+
+enum {
+  INFO_CACHE_UNINITIALIZED = 0,
+  INFO_CACHE_INITIALIZING,
+  INFO_CACHE_INITIALIZED,
+};
+
+static struct {
+  std::atomic<unsigned int> state = INFO_CACHE_UNINITIALIZED;
+  SystemInfo info;
+} info_cache;
+
+SystemInfo getSystemInfo() {
+  // Fast path: load and return.
+  //
+  // Must be acquire because of the first initialization.
+  unsigned int old_state = info_cache.state.load(std::memory_order_acquire);
+
+  if (old_state == INFO_CACHE_INITIALIZED) {
+    return info_cache.info;
+  }
+
+  // If we got an old_state of uninitialized, try to win the CAS race and put the cache in place.
+  if (old_state == INFO_CACHE_UNINITIALIZED) {
+    if (info_cache.state.compare_exchange_strong(old_state, INFO_CACHE_INITIALIZING, std::memory_order_relaxed,
+                                                 std::memory_order_relaxed) == true) {
+      info_cache.info = getSystemInfoUncached();
+      // Release, since capabilities themselves aren't atomic.
+      info_cache.state.store(INFO_CACHE_INITIALIZED, std::memory_order_release);
+    }
+  }
+
+  // Slow path: someone else is initializing, which takes on the order of a couple microseconds.  Spin until that's
+  // done.  This must be acquire because of the update from the other thread, which touches the non-atomic field.
+  while (info_cache.state.load(std::memory_order_acquire) != INFO_CACHE_INITIALIZED)
+    ;
+
+  return info_cache.info;
+}
+
+#if SIMDSP_IS_X86
+static  void runCpuId(unsigned level, unsigned subleaf, unsigned *eax, unsigned *ebx, unsigned *ecx,
                             unsigned *edx) {
 #if __GNUC__
   __cpuid_count(level, subleaf, *eax, *ebx, *ecx, *edx);
@@ -102,7 +175,7 @@ static inline void runCpuId(unsigned level, unsigned subleaf, unsigned *eax, uns
  **/
 #define SAFE_CPUID(LEVEL, SUBLEAF) runCpuId((LEVEL), (SUBLEAF), &eax, &ebx, &ecx, &edx)
 
-static inline CpuManufacturer getCpuManufacturer() {
+static  CpuManufacturer getCpuManufacturer() {
   unsigned int eax, ebx, ecx, edx;
 
   SAFE_CPUID(0, 0);
@@ -112,16 +185,6 @@ static inline CpuManufacturer getCpuManufacturer() {
   if (ebx == 0x68747541 && ecx == 0x444D4163 && edx == 0x69746E65)
     return CpuManufacturer::AMD; // "AuthenticAMD"
   return CpuManufacturer::UNKNOWN;
-}
-
-const char *cpuManufacturerToString(CpuManufacturer man) {
-  if (man == CpuManufacturer::INTEL) {
-    return "intel";
-  } else if (man == CpuManufacturer::AMD) {
-    return "amd";
-  } else {
-    return "unknown";
-  }
 }
 
 inline uint64_t getXcr(unsigned level) {
@@ -136,7 +199,7 @@ inline uint64_t getXcr(unsigned level) {
 #endif
 }
 
-CpuCapabilities getCpuCapabilities() {
+static CpuCapabilities getCpuCapabilities() {
   CpuCapabilities caps{};
 
   uint32_t eax, ebx, ecx, edx;
@@ -201,13 +264,7 @@ CpuCapabilities getCpuCapabilities() {
   return caps;
 }
 
-/*
- * Helper macro to call cpuid without mixing up the order of the registers. Expects variables eax, ebx, ecx, and edx to
- * be in scope.
- **/
-#define SAFE_CPUID(LEVEL, SUBLEAF) runCpuId((LEVEL), (SUBLEAF), &eax, &ebx, &ecx, &edx)
-
-CpuCaches getCpuCacheInfo() {
+static CpuCaches getCpuCacheInfo() {
   unsigned int eax = 0, ebx = 0, ecx = 0, edx = 0;
   CpuCaches ret{0};
 
@@ -286,53 +343,27 @@ CpuCaches getCpuCacheInfo() {
 
   return ret;
 }
-
-SystemInfo getSystemInfoUncached() {
-  SystemInfo sysinfo{};
-
-  sysinfo.cpu_capabilities = getCpuCapabilities();
-  sysinfo.cpu_manufacturer = getCpuManufacturer();
-  sysinfo.cache_info = getCpuCacheInfo();
-  return sysinfo;
+#elif SIMDSP_IS_AARCH64
+static CpuCapabilities getCpuCapabilities() {
+  // For now we don't understand neon.
+  return CpuCapabilities{};
 }
 
-enum {
-  INFO_CACHE_UNINITIALIZED = 0,
-  INFO_CACHE_INITIALIZING,
-  INFO_CACHE_INITIALIZED,
-};
-
-static struct {
-  std::atomic<unsigned int> state = INFO_CACHE_UNINITIALIZED;
-  SystemInfo info;
-} info_cache;
-
-SystemInfo getSystemInfo() {
-  // Fast path: load and return.
-  //
-  // Must be acquire because of the first initialization.
-  unsigned int old_state = info_cache.state.load(std::memory_order_acquire);
-
-  if (old_state == INFO_CACHE_INITIALIZED) {
-    return info_cache.info;
-  }
-
-  // If we got an old_state of uninitialized, try to win the CAS race and put the cache in place.
-  if (old_state == INFO_CACHE_UNINITIALIZED) {
-    if (info_cache.state.compare_exchange_strong(old_state, INFO_CACHE_INITIALIZING, std::memory_order_relaxed,
-                                                 std::memory_order_relaxed) == true) {
-      info_cache.info = getSystemInfoUncached();
-      // Release, since capabilities themselves aren't atomic.
-      info_cache.state.store(INFO_CACHE_INITIALIZED, std::memory_order_release);
-    }
-  }
-
-  // Slow path: someone else is initializing, which takes on the order of a couple microseconds.  Spin until that's
-  // done.  This must be acquire because of the update from the other thread, which touches the non-atomic field.
-  while (info_cache.state.load(std::memory_order_acquire) != INFO_CACHE_INITIALIZED)
-    ;
-
-  return info_cache.info;
+/*
+ * For now, no cache info.  ARM doesn't make getting at this easy, and it's not useful because the only major platforms
+ * which we currently care about have well-defined hardware.
+ */
+static CpuManufacturer getCpuManufacturer() {
+#ifdef __APPLE__
+  return CpuManufacturer::APPLE;
+#else
+  return CpuManufacturer::UNKNOWN;
+#endif
 }
+
+static CpuCaches getCpuCacheInfo() { return CpuCaches{}; }
+#else
+#error Unable to build CPU info for this architecture.
+#endif
 
 } // namespace simdsp

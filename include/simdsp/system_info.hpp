@@ -93,7 +93,7 @@ struct CpuCaches {
   unsigned int l1i, l1d, l1u, l2i, l2d, l2u, l3i, l3d, l3u;
 };
 
-enum class CpuManufacturer { UNKNOWN, INTEL, AMD };
+enum class CpuManufacturer { UNKNOWN, INTEL, AMD, APPLE };
 
 const char *cpuManufacturerToString(CpuManufacturer man);
 

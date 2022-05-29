@@ -9,7 +9,7 @@ using std::cout, std::endl;
 int main() {
   auto info = simdsp::getSystemInfoUncached();
 
-  cout << "CPU is " << simdsp::cpuManufacturerToString(info.cpu_manufacturer) << endl;
+  cout << "CPU manufacturer: " << simdsp::cpuManufacturerToString(info.cpu_manufacturer) << endl;
   cout << "Found the following CPU flags: ";
 
   for (size_t i = 0; i < simdsp::CpuCapabilities::ALL_BITS_COUNT; i++) {
