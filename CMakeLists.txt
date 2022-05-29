@@ -1,12 +1,23 @@
 cmake_minimum_required(VERSION 3.15.0)
 project(simdsp C CXX)
 
-add_subdirectory(third_party/catch2)
+include(FetchContent)
 
 # Apparently we have to do this globally because CMake won't let us set a define for a subdirectory. Without it
 # google/benchmark wants gtest.
 set(BENCHMARK_ENABLE_TESTING OFF)
-add_subdirectory(third_party/benchmark)
+
+FetchContent_Declare(benchmark
+  GIT_REPOSITORY https://github.com/google/benchmark
+  GIT_TAG 37be1e8252527229cccad9f097afe68572f3c08a
+)
+
+FetchContent_Declare(catch2
+  GIT_REPOSITORY https://github.com/catchorg/Catch2
+  GIT_TAG 62fd660583d3ae7a7886930b413c3c570e89786c
+)
+
+FetchContent_MakeAvailable(benchmark catch2)
 
 # these two variables define two kinds of source files: normal files, and files which must go via CPU dynamic dispatch.
 #
@@ -47,7 +58,9 @@ target_link_libraries(tests simdsp Catch2::Catch2)
 set_property(TARGET tests PROPERTY CXX_STANDARD 17)
 
 include(CTest)
-include(third_party/catch2/contrib/Catch.cmake)
+
+
+include("${catch2_SOURCE_DIR}/contrib/Catch.cmake")
 catch_discover_tests(tests)
 
 add_executable(print_cpuinfo utilities/print_cpuinfo.cpp)
