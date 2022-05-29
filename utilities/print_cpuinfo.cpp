@@ -7,16 +7,18 @@
 using std::cout, std::endl;
 
 int main() {
-  cout << "Found the following CPU flags:" << endl;
+  auto info = simdsp::getSystemInfoUncached();
 
-  auto info = simdsp::getSystemInfo();
+  cout << "CPU is " << simdsp::cpuManufacturerToString(info.cpu_manufacturer) << endl;
+  cout << "Found the following CPU flags: ";
+
   for (size_t i = 0; i < simdsp::CpuCapabilities::ALL_BITS_COUNT; i++) {
     if (info.cpu_capabilities & simdsp::CpuCapabilities::ALL_BITS[i]) {
-      cout << simdsp::CpuCapabilities::ALL_BITS[i].printable_string << endl;
+      cout << simdsp::CpuCapabilities::ALL_BITS[i].printable_string << " ";
     }
   }
 
-  cout << endl;
+  cout << endl << endl;
 
   cout << "caches:" << endl;
 

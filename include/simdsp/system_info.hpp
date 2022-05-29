@@ -93,8 +93,13 @@ struct CpuCaches {
   unsigned int l1i, l1d, l1u, l2i, l2d, l2u, l3i, l3d, l3u;
 };
 
+enum class CpuManufacturer { UNKNOWN, INTEL, AMD };
+
+const char *cpuManufacturerToString(CpuManufacturer man);
+
 struct SystemInfo {
   CpuCapabilities cpu_capabilities;
+  CpuManufacturer cpu_manufacturer;
   CpuCaches cache_info;
 };
 

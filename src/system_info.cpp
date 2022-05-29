@@ -80,7 +80,8 @@ BOOL_OPS(^)
 
 #undef BOOL_OPS
 
-inline void runCpuId(unsigned level, unsigned subleaf, unsigned *eax, unsigned *ebx, unsigned *ecx, unsigned *edx) {
+static inline void runCpuId(unsigned level, unsigned subleaf, unsigned *eax, unsigned *ebx, unsigned *ecx,
+                            unsigned *edx) {
 #if __GNUC__
   __cpuid_count(level, subleaf, *eax, *ebx, *ecx, *edx);
 #elif _MSC_VER
@@ -95,7 +96,35 @@ inline void runCpuId(unsigned level, unsigned subleaf, unsigned *eax, unsigned *
 #endif
 }
 
-inline uint64_t get_xcr(unsigned level) {
+/*
+ * Helper macro to call cpuid without mixing up the order of the registers. Expects variables eax, ebx, ecx, and edx to
+ * be in scope.
+ **/
+#define SAFE_CPUID(LEVEL, SUBLEAF) runCpuId((LEVEL), (SUBLEAF), &eax, &ebx, &ecx, &edx)
+
+static inline CpuManufacturer getCpuManufacturer() {
+  unsigned int eax, ebx, ecx, edx;
+
+  SAFE_CPUID(0, 0);
+
+  if (ebx == 0x756E6547 && ecx == 0x6C65746E && edx == 0x49656E69)
+    return CpuManufacturer::INTEL; // "GenuineIntel"
+  if (ebx == 0x68747541 && ecx == 0x444D4163 && edx == 0x69746E65)
+    return CpuManufacturer::AMD; // "AuthenticAMD"
+  return CpuManufacturer::UNKNOWN;
+}
+
+const char *cpuManufacturerToString(CpuManufacturer man) {
+  if (man == CpuManufacturer::INTEL) {
+    return "intel";
+  } else if (man == CpuManufacturer::AMD) {
+    return "amd";
+  } else {
+    return "unknown";
+  }
+}
+
+inline uint64_t getXcr(unsigned level) {
 #if (defined(_MSC_FULL_VER) && _MSC_FULL_VER >= 160040000) || (defined(__INTEL_COMPILER) && __INTEL_COMPILER >= 1200)
   return _xgetbv(level);
 #elif defined(__GNUC__) || defined(__clang__)
@@ -107,16 +136,6 @@ inline uint64_t get_xcr(unsigned level) {
 #endif
 }
 
-enum cpu_manufacturer { CPU_INTEL, CPU_AMD, CPU_UNKNOWN };
-
-static inline cpu_manufacturer get_cpu_manufacturer(uint32_t ebx, uint32_t ecx, uint32_t edx) {
-  if (ebx == 0x756E6547 && ecx == 0x6C65746E && edx == 0x49656E69)
-    return CPU_INTEL; // "GenuineIntel"
-  if (ebx == 0x68747541 && ecx == 0x444D4163 && edx == 0x69746E65)
-    return CPU_AMD; // "AuthenticAMD"
-  return CPU_UNKNOWN;
-}
-
 CpuCapabilities getCpuCapabilities() {
   CpuCapabilities caps{};
 
@@ -125,7 +144,7 @@ CpuCapabilities getCpuCapabilities() {
 
   runCpuId(0, 0, &eax, &ebx, &ecx, &edx);
   unsigned int max_cpuid_level = eax;
-  cpu_manufacturer mfg = get_cpu_manufacturer(ebx, ecx, edx);
+  auto mfg = getCpuManufacturer();
 
   runCpuId(0x80000000, 0, &eax, &ebx, &ecx, &edx);
   unsigned int max_ex_cpuid_level = eax;
@@ -141,7 +160,7 @@ CpuCapabilities getCpuCapabilities() {
       caps |= CpuCapabilities::X86_SSSE3;
     if (ecx & (1u << 19))
       caps |= CpuCapabilities::X86_SSE4_1;
-    if (ecx & (1u << 20) && mfg == CPU_INTEL)
+    if (ecx & (1u << 20) && mfg == CpuManufacturer::INTEL)
       caps |= CpuCapabilities::X86_POPCNT_INSN; // popcnt is included in SSE4.2 on Intel
     if (ecx & (1u << 23))
       caps |= CpuCapabilities::X86_POPCNT_INSN;
@@ -149,7 +168,7 @@ CpuCapabilities getCpuCapabilities() {
       caps |= CpuCapabilities::X86_FMA3;
     if (ecx & (1u << 26)) {
       // XSAVE/XRSTORE available on hardware, now check OS support
-      uint64_t xcr = get_xcr(0);
+      uint64_t xcr = getXcr(0);
       if ((xcr & 6) == 6)
         xsave_xrstore_avail = true;
     }
@@ -272,7 +291,9 @@ SystemInfo getSystemInfoUncached() {
   SystemInfo sysinfo{};
 
   sysinfo.cpu_capabilities = getCpuCapabilities();
+  sysinfo.cpu_manufacturer = getCpuManufacturer();
   sysinfo.cache_info = getCpuCacheInfo();
+  return sysinfo;
 }
 
 enum {
