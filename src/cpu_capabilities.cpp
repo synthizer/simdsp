@@ -15,6 +15,7 @@
 #include <atomic>
 #include <stddef.h>
 #include <stdint.h>
+#include <stdio.h>
 
 #if __GNUC__
 #include <cpuid.h>
@@ -222,6 +223,93 @@ CpuCapabilities getCpuCapabilities() {
     ;
 
   return cpu_capabilities_cache.capabilities;
+}
+
+/*
+ * Helper macro to call cpuid without mixing up the order of the registers. Expects variables eax, ebx, ecx, and edx to
+ * be in scope.
+ **/
+#define SAFE_CPUID(LEVEL, SUBLEAF) detail::get_cpuid((LEVEL), (SUBLEAF), &eax, &ebx, &ecx, &edx)
+
+CpuCaches getCpuCacheInfo() {
+  unsigned int eax = 0, ebx = 0, ecx = 0, edx = 0;
+  CpuCaches ret{0};
+
+  SAFE_CPUID(0, 0);
+  unsigned int max_fn = eax;
+
+  if (max_fn < 4) {
+    return ret;
+  }
+
+  for (unsigned int subleaf = 0;; subleaf++) {
+    // Which cache field are we writing the size to?
+    unsigned int *dest = nullptr;
+    unsigned int cache_type, cache_level;
+
+    SAFE_CPUID(4, subleaf);
+    cache_type = eax & 0xf;
+    cache_level = (eax >> 5) & 0x7;
+
+printf("%u %u\n", cache_type, cache_level);
+    if (cache_type == 1) {
+      switch (cache_level) {
+      case 1:
+        dest = &ret.l1d;
+        break;
+      case 2:
+        dest = &ret.l2d;
+        break;
+      case 3:
+        dest = &ret.l3d;
+        break;
+      }
+    } else if (cache_type == 2) {
+      switch (cache_level) {
+      case 1:
+        dest = &ret.l1i;
+        break;
+      case 2:
+        dest = &ret.l2i;
+        break;
+      case 3:
+        dest = &ret.l3i;
+        break;
+      }
+    } else if (cache_type == 3) {
+      switch (cache_level) {
+      case 1:
+        dest = &ret.l1u;
+        break;
+      case 2:
+        dest = &ret.l2u;
+        break;
+      case 3:
+        dest = &ret.l3u;
+        break;
+      }
+    }
+
+    if (dest == nullptr) {
+      if (cache_type == 0) {
+        // This is the end.
+        break;
+      }
+
+      // We cant handle this one so skip.
+      continue;
+    }
+
+    // Taken from here:
+    // https://stackoverflow.com/questions/14283171/how-to-receive-l1-l2-l3-cache-size-using-cpuid-instruction-in-x86
+    unsigned int ways = (ebx >> 22) + 1;
+    unsigned int partitions = ((ebx >> 12) & 0x3ff) + 1;
+    unsigned int coherency = (ebx & 0x3ff) + 1;
+    unsigned int sets = ecx + 1;
+    *dest = partitions * coherency * ways * sets;
+  }
+
+  return ret;
 }
 
 } // namespace simdsp

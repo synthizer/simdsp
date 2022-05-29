@@ -91,4 +91,19 @@ CpuCapabilities getCpuCapabilitiesUncached();
  */
 CpuCapabilities getCpuCapabilities();
 
+/**
+ * Cache configuration of a CPU
+ *
+ * 0 means unknown or not present.  We can't 100% detect which.
+ *
+ * Mnemonics are u=unified, i=instruction, d=data.  For the most part l2 and l3 are unified, l1 may or may not be split.
+ * In the case where this is ambiguous (I'm looking at you AMD) we "default" to data.  In practice, unified caches are
+ * usually 0.
+ * */
+struct CpuCaches {
+  unsigned int l1i, l1d, l1u, l2i, l2d, l2u, l3i, l3d, l3u;
+};
+
+CpuCaches getCpuCacheInfo();
+
 } // namespace simdsp
