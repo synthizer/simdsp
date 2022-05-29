@@ -23,7 +23,7 @@ FetchContent_MakeAvailable(benchmark catch2)
 #
 # They are turned into the library, below.
 set(VANILLA_FILES
-  src/cpu_capabilities.cpp
+  src/system_info.cpp
 )
 
 # these are for dispatching
@@ -45,7 +45,7 @@ setup_properties(simdsp)
 
 add_executable(benches
   bench/convolution_engine.cpp
-  bench/cpu_capabilities.cpp
+  bench/system_info.cpp
 )
 target_link_libraries(benches simdsp benchmark::benchmark benchmark::benchmark_main)
 set_property(TARGET benches PROPERTY CXX_STANDARD 17)
@@ -58,7 +58,6 @@ target_link_libraries(tests simdsp Catch2::Catch2)
 set_property(TARGET tests PROPERTY CXX_STANDARD 17)
 
 include(CTest)
-
 
 include("${catch2_SOURCE_DIR}/contrib/Catch.cmake")
 catch_discover_tests(tests)

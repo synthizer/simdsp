@@ -81,17 +81,6 @@ CpuCapabilities operator|(const CpuCapabilities &a, const CpuCapabilities &b);
 #undef BOOL_OPS
 
 /**
- *  Get uncached CPU capabilities.
- *
- * This is an expensive function, easily on the order of hundreds of cycles.  Users should cache the results.
- */
-CpuCapabilities getCpuCapabilitiesUncached();
-/*
- * Get cached CPU capabilities.  After the first slow invocation, this function is an atomic load.
- */
-CpuCapabilities getCpuCapabilities();
-
-/**
  * Cache configuration of a CPU
  *
  * 0 means unknown or not present.  We can't 100% detect which.
@@ -104,6 +93,21 @@ struct CpuCaches {
   unsigned int l1i, l1d, l1u, l2i, l2d, l2u, l3i, l3d, l3u;
 };
 
-CpuCaches getCpuCacheInfo();
+struct SystemInfo {
+  CpuCapabilities cpu_capabilities;
+  CpuCaches cache_info;
+};
+
+/**
+ *  Get uncached CPU capabilities.
+ *
+ * This is an expensive function, easily on the order of 10k cycles.  Users should cache the results.
+ */
+SystemInfo getSystemInfoUncached();
+
+/*
+ * Get cached system information.  After the first slow invocation, this function is an atomic load.
+ */
+SystemInfo getSystemInfo();
 
 } // namespace simdsp
