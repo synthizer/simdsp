@@ -80,9 +80,7 @@ BOOL_OPS(^)
 
 #undef BOOL_OPS
 
-namespace detail {
-
-inline void get_cpuid(unsigned level, unsigned subleaf, unsigned *eax, unsigned *ebx, unsigned *ecx, unsigned *edx) {
+inline void runCpuId(unsigned level, unsigned subleaf, unsigned *eax, unsigned *ebx, unsigned *ecx, unsigned *edx) {
 #if __GNUC__
   __cpuid_count(level, subleaf, *eax, *ebx, *ecx, *edx);
 #elif _MSC_VER
@@ -119,23 +117,21 @@ static inline cpu_manufacturer get_cpu_manufacturer(uint32_t ebx, uint32_t ecx, 
   return CPU_UNKNOWN;
 }
 
-} // namespace detail
-
 CpuCapabilities getCpuCapabilitiesUncached() {
   CpuCapabilities caps{};
 
   uint32_t eax, ebx, ecx, edx;
   bool xsave_xrstore_avail = false;
 
-  simdsp::detail::get_cpuid(0, 0, &eax, &ebx, &ecx, &edx);
+  runCpuId(0, 0, &eax, &ebx, &ecx, &edx);
   unsigned int max_cpuid_level = eax;
-  simdsp::detail::cpu_manufacturer mfg = simdsp::detail::get_cpu_manufacturer(ebx, ecx, edx);
+  cpu_manufacturer mfg = get_cpu_manufacturer(ebx, ecx, edx);
 
-  simdsp::detail::get_cpuid(0x80000000, 0, &eax, &ebx, &ecx, &edx);
+  runCpuId(0x80000000, 0, &eax, &ebx, &ecx, &edx);
   unsigned int max_ex_cpuid_level = eax;
 
   if (max_cpuid_level >= 0x00000001) {
-    simdsp::detail::get_cpuid(0x00000001, 0, &eax, &ebx, &ecx, &edx);
+    runCpuId(0x00000001, 0, &eax, &ebx, &ecx, &edx);
 
     if (edx & (1u << 26))
       caps |= CpuCapabilities::X86_SSE2;
@@ -145,7 +141,7 @@ CpuCapabilities getCpuCapabilitiesUncached() {
       caps |= CpuCapabilities::X86_SSSE3;
     if (ecx & (1u << 19))
       caps |= CpuCapabilities::X86_SSE4_1;
-    if (ecx & (1u << 20) && mfg == simdsp::detail::CPU_INTEL)
+    if (ecx & (1u << 20) && mfg == CPU_INTEL)
       caps |= CpuCapabilities::X86_POPCNT_INSN; // popcnt is included in SSE4.2 on Intel
     if (ecx & (1u << 23))
       caps |= CpuCapabilities::X86_POPCNT_INSN;
@@ -153,7 +149,7 @@ CpuCapabilities getCpuCapabilitiesUncached() {
       caps |= CpuCapabilities::X86_FMA3;
     if (ecx & (1u << 26)) {
       // XSAVE/XRSTORE available on hardware, now check OS support
-      uint64_t xcr = simdsp::detail::get_xcr(0);
+      uint64_t xcr = get_xcr(0);
       if ((xcr & 6) == 6)
         xsave_xrstore_avail = true;
     }
@@ -162,7 +158,7 @@ CpuCapabilities getCpuCapabilitiesUncached() {
       caps |= CpuCapabilities::X86_AVX;
   }
   if (max_ex_cpuid_level >= 0x80000001) {
-    simdsp::detail::get_cpuid(0x80000001, 0, &eax, &ebx, &ecx, &edx);
+    runCpuId(0x80000001, 0, &eax, &ebx, &ecx, &edx);
     if (ecx & (1u << 16))
       caps |= CpuCapabilities::X86_FMA4;
     if (ecx & (1u << 11))
@@ -170,7 +166,7 @@ CpuCapabilities getCpuCapabilitiesUncached() {
   }
 
   if (max_cpuid_level >= 0x00000007) {
-    simdsp::detail::get_cpuid(0x00000007, 0, &eax, &ebx, &ecx, &edx);
+    runCpuId(0x00000007, 0, &eax, &ebx, &ecx, &edx);
     if (ebx & (1u << 5) && xsave_xrstore_avail)
       caps |= CpuCapabilities::X86_AVX2;
     if (ebx & (1u << 16) && xsave_xrstore_avail)
@@ -229,7 +225,7 @@ CpuCapabilities getCpuCapabilities() {
  * Helper macro to call cpuid without mixing up the order of the registers. Expects variables eax, ebx, ecx, and edx to
  * be in scope.
  **/
-#define SAFE_CPUID(LEVEL, SUBLEAF) detail::get_cpuid((LEVEL), (SUBLEAF), &eax, &ebx, &ecx, &edx)
+#define SAFE_CPUID(LEVEL, SUBLEAF) runCpuId((LEVEL), (SUBLEAF), &eax, &ebx, &ecx, &edx)
 
 CpuCaches getCpuCacheInfo() {
   unsigned int eax = 0, ebx = 0, ecx = 0, edx = 0;
