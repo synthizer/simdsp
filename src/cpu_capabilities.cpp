@@ -251,7 +251,6 @@ CpuCaches getCpuCacheInfo() {
     cache_type = eax & 0xf;
     cache_level = (eax >> 5) & 0x7;
 
-printf("%u %u\n", cache_type, cache_level);
     if (cache_type == 1) {
       switch (cache_level) {
       case 1:
