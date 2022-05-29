@@ -153,8 +153,7 @@ SystemInfo getSystemInfo() {
 }
 
 #if SIMDSP_IS_X86
-static  void runCpuId(unsigned level, unsigned subleaf, unsigned *eax, unsigned *ebx, unsigned *ecx,
-                            unsigned *edx) {
+static void runCpuId(unsigned level, unsigned subleaf, unsigned *eax, unsigned *ebx, unsigned *ecx, unsigned *edx) {
 #if __GNUC__
   __cpuid_count(level, subleaf, *eax, *ebx, *ecx, *edx);
 #elif _MSC_VER
@@ -175,7 +174,7 @@ static  void runCpuId(unsigned level, unsigned subleaf, unsigned *eax, unsigned 
  **/
 #define SAFE_CPUID(LEVEL, SUBLEAF) runCpuId((LEVEL), (SUBLEAF), &eax, &ebx, &ecx, &edx)
 
-static  CpuManufacturer getCpuManufacturer() {
+static CpuManufacturer getCpuManufacturer() {
   unsigned int eax, ebx, ecx, edx;
 
   SAFE_CPUID(0, 0);
@@ -264,7 +263,7 @@ static CpuCapabilities getCpuCapabilities() {
   return caps;
 }
 
-static CpuCaches getCpuCacheInfo() {
+static CpuCaches getCpuCacheInfoIntel() {
   unsigned int eax = 0, ebx = 0, ecx = 0, edx = 0;
   CpuCaches ret{0};
 
@@ -343,7 +342,44 @@ static CpuCaches getCpuCacheInfo() {
 
   return ret;
 }
+
+static CpuCaches getCpuCacheInfoAmd() {
+  unsigned int eax, ebx, ecx, edx;
+  CpuCaches ret{0};
+
+  SAFE_CPUID(0x80000000, 0);
+  unsigned int max_fn = eax;
+
+  if (max_fn >= 0x80000005) {
+    SAFE_CPUID(0x80000005, 0);
+    ret.l1d = (ecx >> 24) * 1024;
+    ret.l1i = (edx >> 24) * 1024;
+  }
+
+  if (max_fn > 0x80000006) {
+    SAFE_CPUID(0x80000006, 0);
+    ret.l2u = (ecx >> 16) * 1024;
+    ret.l3u = (edx >> 18) * 512 * 1024;
+  }
+
+  return ret;
+}
+
+static CpuCaches getCpuCacheInfo() {
+  auto man = getCpuManufacturer();
+
+  if (man == CpuManufacturer::AMD) {
+    return getCpuCacheInfoAmd();
+  } else {
+    // Really it's only Intel and AMD, but there's also lesser things like Via and other implementations in China. Let's
+    // just assume everything will be compatible since I can't get access.  If you're reading the code and find this
+    // comment, feel free to contribute.
+    return getCpuCacheInfoIntel();
+  }
+}
+
 #elif SIMDSP_IS_AARCH64
+
 static CpuCapabilities getCpuCapabilities() {
   // For now we don't understand neon.
   return CpuCapabilities{};
