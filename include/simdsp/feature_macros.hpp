@@ -12,7 +12,7 @@
  * - SIMDSP_IS_AARCH64: Aarch64.
  **/
 
-#if !defined(MSVC)
+#if !defined(_MSC_VER)
 #if defined(__aarch64__) || defined(_M_ARM64)
 #define SIMDSP_IS_AARCH64 1
 #elif defined(__i386__) || defined(__x86_64__)
@@ -23,7 +23,7 @@
 #if defined(_M_ARM64)
 #define SIMDSP_IS_AARCH64
 #elif !defined(_M_ARM)
-#define SIMDSP_IS_X86
+#define SIMDSP_IS_X86 1
 #endif
 #endif
 
