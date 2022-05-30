@@ -43,7 +43,7 @@ class CpuCapabilities {
 public:
   CpuCapabilities(unsigned int bits = 0);
 
-  inline static const CpuBit NONE{"none", 0}, X86_SSE2{"x86_sse2", 1 << 1}, X86_SSE3{"x86_sse3", 1 << 2},
+  inline constexpr static const CpuBit NONE{"none", 0}, X86_SSE2{"x86_sse2", 1 << 1}, X86_SSE3{"x86_sse3", 1 << 2},
       X86_SSSE3{"x86_ssse3", 1 << 3}, X86_SSE4_1{"x86_sse4_1", 1 << 4}, X86_POPCNT_INSN{"x86_popcnt_insn", 1 << 5},
       X86_AVX{"x86_avx", 1 << 6}, X86_AVX2{"x86_avx2", 1 << 7}, X86_FMA3{"x86_fma3", 1 << 8},
       X86_FMA4{"x86_fma4", 1 << 9}, X86_XOP{"x86_xop", 1 << 10}, X86_AVX512F{"x86_avx512f", 1 << 11},
