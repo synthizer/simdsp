@@ -115,4 +115,14 @@ SystemInfo getSystemInfoUncached();
  */
 SystemInfo getSystemInfo();
 
+/**
+ * Return a somewhat opaque JSON string that is useful for displaying or parsing in other languages.
+ *
+ * Primarily useful for debugging, or pulling apart simdsp in e.g. Rust or Python without having to write a bunch of
+ * manual code.
+ *
+ * Should be free(2)d.
+ * */
+char *convertSystemInfoToJson(SystemInfo *sysinfo);
+
 } // namespace simdsp

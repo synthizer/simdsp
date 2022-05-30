@@ -24,6 +24,7 @@ FetchContent_MakeAvailable(benchmark catch2)
 # They are turned into the library, below.
 set(VANILLA_FILES
   src/system_info.cpp
+  src/system_info_json.cpp
 )
 
 # these are for dispatching
