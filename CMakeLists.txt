@@ -66,3 +66,12 @@ catch_discover_tests(tests)
 add_executable(print_cpuinfo utilities/print_cpuinfo.cpp)
 set_property(TARGET print_cpuinfo PROPERTY CXX_STANDARD 17)
 target_link_libraries(print_cpuinfo simdsp)
+
+
+install(
+  TARGETS simdsp
+  LIBRARY DESTINATION  "${CMAKE_INSTALL_LIBDIR}"
+  ARCHIVE DESTINATION  "${CMAKE_INSTALL_LIBDIR}"
+  RUNTIME DESTINATION  "${CMAKE_INSTALL_BINDIR}"
+  INCLUDES DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
+)
