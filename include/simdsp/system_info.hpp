@@ -96,11 +96,15 @@ struct CpuCaches {
 
 enum class CpuManufacturer { UNKNOWN, INTEL, AMD, APPLE };
 
+enum class CpuArchitecture { AARCH64, X86 };
+
 const char *cpuManufacturerToString(CpuManufacturer man);
+const char *cpuArchitectureToString(CpuArchitecture arch);
 
 struct SystemInfo {
   CpuCapabilities cpu_capabilities;
   CpuManufacturer cpu_manufacturer;
+  CpuArchitecture cpu_architecture;
   CpuCaches cache_info;
 };
 

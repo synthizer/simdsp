@@ -72,6 +72,8 @@ char *convertSystemInfoToJson(SystemInfo *sysinfo) {
   jsonWriteKv(out, "cpu_capabilities", cpu_capabilities);
   out << ',';
   jsonWriteKv(out, "cpu_manufacturer", cpuManufacturerToString(sysinfo->cpu_manufacturer));
+  out << ',';
+  jsonWriteKv(out, "cpu_architecture", cpuArchitectureToString(sysinfo->cpu_architecture));
   out << '}';
 
   return strdup(out.str().c_str());

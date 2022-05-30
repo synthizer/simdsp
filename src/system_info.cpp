@@ -95,6 +95,16 @@ const char *cpuManufacturerToString(CpuManufacturer man) {
   }
 }
 
+const char *cpuArchitectureToString(CpuArchitecture arch) {
+  if (arch == CpuArchitecture::AARCH64) {
+    return "aarch64";
+  } else if (arch == CpuArchitecture::X86) {
+    return "x86";
+  } else {
+    return "unknown";
+  }
+}
+
 /*
  * We define the platform-agnostic version of this up here, then jump into preprocessor-guarded code for the rest of the
  * file.
@@ -102,6 +112,7 @@ const char *cpuManufacturerToString(CpuManufacturer man) {
 
 static CpuCapabilities getCpuCapabilities();
 static CpuManufacturer getCpuManufacturer();
+static CpuArchitecture getCpuArchitecture();
 static CpuCaches getCpuCacheInfo();
 
 SystemInfo getSystemInfoUncached() {
@@ -109,6 +120,7 @@ SystemInfo getSystemInfoUncached() {
 
   sysinfo.cpu_capabilities = getCpuCapabilities();
   sysinfo.cpu_manufacturer = getCpuManufacturer();
+  sysinfo.cpu_architecture = getCpuArchitecture();
   sysinfo.cache_info = getCpuCacheInfo();
   return sysinfo;
 }
@@ -185,6 +197,8 @@ static CpuManufacturer getCpuManufacturer() {
     return CpuManufacturer::AMD; // "AuthenticAMD"
   return CpuManufacturer::UNKNOWN;
 }
+
+static CpuArchitecture getCpuArchitecture() { return CpuArchitecture::X86; }
 
 inline uint64_t getXcr(unsigned level) {
 #if (defined(_MSC_FULL_VER) && _MSC_FULL_VER >= 160040000) || (defined(__INTEL_COMPILER) && __INTEL_COMPILER >= 1200)
@@ -396,6 +410,8 @@ static CpuManufacturer getCpuManufacturer() {
   return CpuManufacturer::UNKNOWN;
 #endif
 }
+
+static CpuArchitecture getCpuArchitecture() { return CpuArchitecture::AARCH64; }
 
 static CpuCaches getCpuCacheInfo() { return CpuCaches{}; }
 #else
