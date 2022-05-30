@@ -43,11 +43,12 @@ class CpuCapabilities {
 public:
   CpuCapabilities(unsigned int bits = 0);
 
-  inline static const CpuBit NONE{"none", 0}, X86_SSE2{"sse2", 1 << 1}, X86_SSE3{"sse3", 1 << 2},
-      X86_SSSE3{"ssse3", 1 << 3}, X86_SSE4_1{"sse4_1", 1 << 4}, X86_POPCNT_INSN{"popcnt_insn", 1 << 5},
-      X86_AVX{"avx", 1 << 6}, X86_AVX2{"avx2", 1 << 7}, X86_FMA3{"fma3", 1 << 8}, X86_FMA4{"fma4", 1 << 9},
-      X86_XOP{"xop", 1 << 10}, X86_AVX512F{"avx512f", 1 << 11}, X86_AVX512BW{"avx512bw", 1 << 12},
-      X86_AVX512DQ{"avx512dq", 1 << 13}, X86_AVX512VL{"avx512vl", 1 << 14};
+  inline static const CpuBit NONE{"none", 0}, X86_SSE2{"x86_sse2", 1 << 1}, X86_SSE3{"x86_sse3", 1 << 2},
+      X86_SSSE3{"x86_ssse3", 1 << 3}, X86_SSE4_1{"x86_sse4_1", 1 << 4}, X86_POPCNT_INSN{"x86_popcnt_insn", 1 << 5},
+      X86_AVX{"x86_avx", 1 << 6}, X86_AVX2{"x86_avx2", 1 << 7}, X86_FMA3{"x86_fma3", 1 << 8},
+      X86_FMA4{"x86_fma4", 1 << 9}, X86_XOP{"x86_xop", 1 << 10}, X86_AVX512F{"x86_avx512f", 1 << 11},
+      X86_AVX512BW{"x86_avx512bw", 1 << 12}, X86_AVX512DQ{"x86_avx512dq", 1 << 13},
+      X86_AVX512VL{"x86_avx512vl", 1 << 14};
 
   /*
    * these two constants expose a table of all CPU bits except for none for the purposes of iteration.
